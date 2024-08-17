@@ -1,6 +1,7 @@
 use std::fs;
 use clap::Parser;
 use mlua::prelude::*;
+use mlua::Function;
 
 fn main() {
     println!("parser intro..");
@@ -13,10 +14,8 @@ fn main() {
             expect("impossible to open lua level file");
 
         let lua = Lua::new();
-        lua.globals().set("alfa", "omega");
-        let res = lua.load( level_lua_code ).exec();
-        match res {
-            Ok(()) => println!("...Ok..."),
+        match work_lua(&lua, &level_lua_code) {
+            Ok(()) => println!("...Ok!"),
             Err(e) => {
                 eprintln!("Lua: {}", e);
             },
@@ -33,18 +32,27 @@ struct CliArgs {
 
 
 
+// // // // // // // //
+fn work_lua( lua: &Lua, level_lua_code: &str ) -> mlua::Result<()> {
+    let globals = lua.globals();
+    globals.set("alfa", "omega")?;
+    let rst_fn = lua.create_function( |_, ()| {
+        println!("from LUAAAAAAAA");
+        Ok(())
+    })?;
+    globals.set("invokeRust", rst_fn)?;
 
-        //println!("{} -> {}", args.commandName, args.zalue);
-        //println!("{} -> {}", args.uflA, args.wflBCDe);
-        //println!("mOtp -> {}", args.mOptCam );
+    lua.load( level_lua_code ).exec()?;
+    let lua_b: String = globals.get("b")?;
+    println!("lua B = {}", lua_b);
 
-    // //#[arg(short,long)]
-    //commandName: String,
-    //#[arg(short,long, default_value_t = 0)]
-    //zalue: u8,
-    //#[arg(short,long, default_value_t = false)]
-    //uflA: bool,
-    //#[arg(short,long, default_value_t = false)]
-    //wflBCDe: bool,
-    //#[arg(short,long, default_value_t = false)]
-    //mOptCam: bool,
+    let call_from_rust: Function = globals.get("fromRust")?;
+    call_from_rust.call::<_, ()>(())?;
+
+    let call_from_rust_2: Function = globals.get("fromRust2")?;
+    let res: u32 = call_from_rust_2.call::<_, u32>("MegaKey")?;
+    println!("from lua u32 = {}", res);
+
+    Ok(())
+}
+
